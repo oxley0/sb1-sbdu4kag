@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Rewind, FastForward, Play, Pause, AlertCircle } from 'lucide-react';
+import { Rewind, FastForward, Play, Pause, AlertCircle, Loader } from 'lucide-react';
 
 function VideoPlayer() {
   const { episode } = useParams();
@@ -8,10 +8,58 @@ function VideoPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [error, setError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     setError(false);
+    setIsLoading(true);
+    setProgress(0);
+    
+    // Reset video state when episode changes
+    if (videoRef.current) {
+      videoRef.current.load();
+    }
   }, [episode]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleLoadStart = () => {
+      setIsLoading(true);
+      setError(false);
+    };
+
+    const handleLoadedData = () => {
+      setIsLoading(false);
+      setError(false);
+    };
+
+    const handleProgress = () => {
+      if (video.buffered.length > 0) {
+        const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+        const duration = video.duration;
+        setProgress((bufferedEnd / duration) * 100);
+      }
+    };
+
+    // Add event listeners
+    video.addEventListener('loadstart', handleLoadStart);
+    video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('progress', handleProgress);
+    video.addEventListener('waiting', () => setIsLoading(true));
+    video.addEventListener('canplay', () => setIsLoading(false));
+
+    // Cleanup
+    return () => {
+      video.removeEventListener('loadstart', handleLoadStart);
+      video.removeEventListener('loadeddata', handleLoadedData);
+      video.removeEventListener('progress', handleProgress);
+      video.removeEventListener('waiting', () => setIsLoading(true));
+      video.removeEventListener('canplay', () => setIsLoading(false));
+    };
+  }, []);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -40,6 +88,7 @@ function VideoPlayer() {
   const handleError = () => {
     setError(true);
     setIsPlaying(false);
+    setIsLoading(false);
   };
 
   if (error) {
@@ -67,12 +116,22 @@ function VideoPlayer() {
       <h1 className="text-3xl font-bold text-white mb-6">Demon Slayer - Episode {episode}</h1>
       
       <div className="relative bg-black rounded-lg overflow-hidden">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+            <div className="text-center">
+              <Loader className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+              <p className="text-white">Loading video... {Math.round(progress)}%</p>
+            </div>
+          </div>
+        )}
+        
         <video
           ref={videoRef}
           className="w-full aspect-video"
           src={`/components/eps_${episode}.mp4`}
           onError={handleError}
           controls={false}
+          preload="auto"
         />
         
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
@@ -81,6 +140,7 @@ function VideoPlayer() {
               <button
                 onClick={() => handleTimeSkip(-10)}
                 className="text-white hover:text-blue-400 transition"
+                disabled={isLoading}
               >
                 <Rewind className="w-6 h-6" />
               </button>
@@ -88,6 +148,7 @@ function VideoPlayer() {
               <button
                 onClick={togglePlay}
                 className="text-white hover:text-blue-400 transition"
+                disabled={isLoading}
               >
                 {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
               </button>
@@ -95,6 +156,7 @@ function VideoPlayer() {
               <button
                 onClick={() => handleTimeSkip(10)}
                 className="text-white hover:text-blue-400 transition"
+                disabled={isLoading}
               >
                 <FastForward className="w-6 h-6" />
               </button>
@@ -109,7 +171,8 @@ function VideoPlayer() {
                     playbackRate === rate
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
+                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isLoading}
                 >
                   {rate}x
                 </button>
