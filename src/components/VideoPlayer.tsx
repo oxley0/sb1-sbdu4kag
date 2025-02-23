@@ -70,7 +70,7 @@ function VideoPlayer() {
         <video
           ref={videoRef}
           className="w-full aspect-video"
-          src={`/src/components/eps_${episode}.mp4`}
+          src={`/components/eps_${episode}.mp4`}
           onError={handleError}
           controls={false}
         />
