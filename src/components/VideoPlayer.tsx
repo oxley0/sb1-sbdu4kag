@@ -128,7 +128,7 @@ function VideoPlayer() {
         <video
           ref={videoRef}
           className="w-full aspect-video"
-          src={`/components/eps_${episode}.mp4`}
+          src={`https://cdn.discordapp.com/attachments/1269215595661103115/1343542743489708094/eps_1.mp4?ex=67bda72f&is=67bc55af&hm=c28d3b1d89eebaae10a3e530fd5382dda9cec1b441541ff21fac1e20f8f66548&`}
           onError={handleError}
           controls={false}
           preload="auto"
